@@ -1,40 +1,36 @@
 import 'source-map-support/register'
-import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { getUserIdFromJwt } from '../../auth/utils'
 import { createLogger } from '../../utils/logger'
 import { TodoRepository } from '../../repository/todoRepository';
 import { TodoAccess } from '../../infra/TodoAccess';
+import * as middy from 'middy';
+import { cors } from 'middy/middlewares';
 
 const logger = createLogger('getTodos')
-
 const repository = new TodoRepository(new TodoAccess());
 
-export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+const getAllTodosHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-
-    logger.info('Getting TODOs')
     const userId = getUserIdFromJwt(event);
     const result = await repository.getTodosByUserId(userId)
-
-    // SUCCESS
-    logger.info('Scanned TODO');
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
       body: JSON.stringify({ items: result })
     }
   }
   catch (e) {
-    // FAIL
     logger.error('Unable to scan TODO', { e });
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*'
-      },
       body: e.message
     }
   }
-}
+};
+
+export const handler = middy(getAllTodosHandler)
+  .use(
+    cors({
+      credentials: true
+    })
+  );
