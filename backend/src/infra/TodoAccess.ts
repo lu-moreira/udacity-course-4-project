@@ -52,6 +52,24 @@ export class TodoAccess implements ITodoRepoAdapter {
     }
 
     async getTodosByUserId(userId: string): Promise<TodoItem[]> {
+        return this.getTodosByUserIdWithQuery(userId);
+    }
+
+    async getTodosByUserIdWithQuery(userId: string): Promise<TodoItem[]> {
+        const params = {
+            TableName: this.todoTable,
+            IndexName: this.userIdIndex,
+            KeyConditionExpression: 'userId = :u',
+            ExpressionAttributeValues: { 
+                ':u': userId 
+            }
+          };
+      
+          const result = await this.docClient.query(params).promise();
+          return result.Items as TodoItem[]
+    }
+
+    async getTodosByUserIdWithScan(userId: string): Promise<TodoItem[]> {
         const params = {
             TableName: this.todoTable,
             IndexName: this.userIdIndex,

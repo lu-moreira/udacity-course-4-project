@@ -22,7 +22,7 @@ provider:
     apiGateway: true
 
   environment:
-    TODO_TABLE: TodoList-${self:provider.stage}
+    TODO_TABLE: TodoList-001-${self:provider.stage}
     TODO_TABLE_ARN: "arn:aws:dynamodb:us-east-1:*:table/${self:provider.environment.TODO_TABLE}"
     FILE_UPLOAD_S3_BUCKET: lmm-br-todo-files-bucket-0001-${self:provider.stage}
     INDEX_NAME: user-index
@@ -56,8 +56,14 @@ functions:
           cors: true
     iamRoleStatements:
       - Effect: Allow
-        Action: dynamodb:Scan
+        Action: 
+          - dynamodb:Scan
+          - dynamodb:Query
         Resource: ${self:provider.environment.TODO_TABLE_ARN}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/index/${self:provider.environment.INDEX_NAME}
       - Effect: Allow
         Action:
           - "xray:PutTraceSegments"
@@ -176,10 +182,8 @@ resources:
         GlobalSecondaryIndexes:
           - IndexName: ${self:provider.environment.INDEX_NAME}
             KeySchema:
-              - AttributeName: todoId
-                KeyType: HASH
               - AttributeName: userId
-                KeyType: RANGE
+                KeyType: HASH
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
 
