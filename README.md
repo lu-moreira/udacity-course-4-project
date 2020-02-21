@@ -61,3 +61,6 @@ http://g.recordit.co/AUWRU8H7sn.gif
 
 ### Task Image View
 ![image](https://user-images.githubusercontent.com/45040629/75077869-be48b700-54e2-11ea-81dd-946e38f5dd29.png)
+
+### AWS X-Ray View
+![image](https://user-images.githubusercontent.com/45040629/75078190-bd645500-54e3-11ea-947b-ba3fabd193f2.png)
