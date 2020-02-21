@@ -2,39 +2,20 @@ import 'source-map-support/register'
 
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 import { CreateTodoRequest } from '../../requests/CreateTodoRequest'
-import { v4 as uuid } from 'uuid';
 import { createLogger } from '../../utils/logger'
-import { DynamoDB } from 'aws-sdk';
 import { getUserIdFromJwt } from '../../auth/utils';
-import { TodoItem } from '../../models/TodoItem';
+import { TodoRepository } from '../../repository/todoRepository';
+import { TodoAccess } from '../../infra/TodoAccess';
 
 const logger = createLogger('createTodo')
-const docClient = new DynamoDB.DocumentClient();
-const TODO_TABLE = process.env.TODO_TABLE
+const repository = new TodoRepository(new TodoAccess());
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    const { name, dueDate }: CreateTodoRequest = JSON.parse(event.body)
+    const request   = JSON.parse(event.body) as CreateTodoRequest
     const userId = getUserIdFromJwt(event);
-    const createdAt = new Date().toISOString();
-    const newItem: TodoItem = {
-      todoId: uuid(),
-      userId,
-      createdAt,
-      name,
-      dueDate,
-      done: false
-    }
+    var newItem = await repository.createTodo(request, userId)
 
-    const params = {
-      TableName: TODO_TABLE,
-      Item: newItem
-    };
-
-    await docClient.put(params).promise();
-
-    // Return SUCCESS
-    logger.info('Created TODO', { newItem });
     return {
       statusCode: 201,
       headers: {
