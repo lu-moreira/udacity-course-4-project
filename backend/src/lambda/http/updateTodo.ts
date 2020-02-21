@@ -2,47 +2,20 @@ import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } from 'aws-lambda'
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { createLogger } from '../../utils/logger'
-import { DynamoDB } from 'aws-sdk';
+import { TodoRepository } from '../../repository/todoRepository';
+import { TodoAccess } from '../../infra/TodoAccess';
 
-const docClient = new DynamoDB.DocumentClient();
 const logger = createLogger('updateTodo')
 
-const TODO_TABLE = process.env.TODO_TABLE
-const FILE_UPLOAD_S3_BUCKET = process.env.FILE_UPLOAD_S3_BUCKET
+const repository = new TodoRepository(new TodoAccess());
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   logger.info('Entered update handler')
   const todoId = event.pathParameters.todoId
-  const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
 
   try {
-
-    // Get the current version of the TODO...
-    const getTodo = await docClient.get({ TableName: TODO_TABLE, Key: { todoId } }).promise();
-    const currentTodo = getTodo.Item;
-
-    // ..determine the bucket image location
-    const attachmentUrl = `https://${FILE_UPLOAD_S3_BUCKET}.s3.us-east-1.amazonaws.com/${todoId}`
-
-    const updatedAt = new Date().toISOString();
-
-    // ...then PATCH it with the supplied details
-    const newTodo = { ...currentTodo, ...updatedTodo, attachmentUrl, updatedAt };
-    logger.info('NEW todo', { newTodo });
-
-    // ...and update the record
-    const params = {
-      TableName: TODO_TABLE,
-      Key: { todoId },
-      UpdateExpression: 'set attachmentUrl = :u, dueDate = :due, done = :done, updatedAt = :updatedAt',
-      ExpressionAttributeValues: {
-        ':u': newTodo.attachmentUrl,
-        ':due': newTodo.dueDate,
-        ':done': newTodo.done,
-        ':updatedAt': newTodo.updatedAt
-      }
-    };
-    await docClient.update(params).promise();
+    const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
+    await repository.updateTodoById(todoId, updatedTodo)
 
     // SUCCESS
     logger.info('Updated TODO', { todoId });
